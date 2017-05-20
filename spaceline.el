@@ -561,14 +561,18 @@ See `spaceline--init-runtime-data' for more info about these variables."
                    (dolist (segment-spec left-segs)
                      (spaceline--parse-segment-spec segment-spec
                        (push (cons (spaceline--gen-segment segment-spec 'l)
-                                   `((priority . ,(or (plist-get props :priority) -1))))
+                                   `((priority . ,(or (plist-get props :priority) -1))
+                                     (shown . t)
+                                     (length . 0)))
                              list)))
                    (reverse list)))
            (right (let (list)
                     (dolist (segment-spec right-segs)
                       (spaceline--parse-segment-spec segment-spec
                         (push (cons (spaceline--gen-segment segment-spec 'r)
-                                    `((priority . ,(or (plist-get props :priority) -1))))
+                                    `((priority . ,(or (plist-get props :priority) -1))
+                                      (shown . t)
+                                      (length . 0)))
                               list)))
                     list)))
        (defvar-local ,segments-code-left left
@@ -656,26 +660,14 @@ This function does:
   it by priority."
   `(progn
      (setq ,segments-code-target-left
-           (--map (cons (car it) (cdr it)) ,segments-code-target-left))
+           (--map (cons (car it) (copy-tree (cdr it))) ,segments-code-target-left))
      (setq ,segments-code-target-right
-           (--map (cons (car it) (cdr it)) ,segments-code-target-right))
+           (--map (cons (car it) (copy-tree (cdr it))) ,segments-code-target-right))
      (let ((left ,segments-code-target-left)
            (right ,segments-code-target-right))
-       (while (or (car left) (car right))
-         (when (car left)
-           (let ((runtime-data (append `(,(cons 'shown t)
-                                         ,(cons 'length 0))
-                                       (cdar left))))
-             (setcdr (car left) runtime-data)
-             (push runtime-data ,responsiveness-runtime-data))
-           (setq left (cdr left)))
-         (when (car right)
-           (let ((runtime-data (append `(,(cons 'shown t)
-                                         ,(cons 'length 0))
-                                       (cdar right))))
-             (setcdr (car right) runtime-data)
-             (push runtime-data ,responsiveness-runtime-data))
-           (setq right (cdr right)))))
+       (while (or left right)
+         (when left (push (cdr (pop left)) ,responsiveness-runtime-data))
+         (when right (push (cdr (pop right)) ,responsiveness-runtime-data))))
      (setq ,responsiveness-runtime-data
            (sort ,responsiveness-runtime-data
                  'spaceline--compare-priorities))))
